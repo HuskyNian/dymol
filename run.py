@@ -40,12 +40,12 @@ class MultiOracle(Oracle):
             score = oracle(*args, **kwargs)
             name = oracle.name
             if name == "sa":
-                score =  1- (10 - score)/9 ##  score = (10 - score)/9
-            if name in ['drd2','gsk3b']: #####
+                score =  (10 - score)/9 ##  score = (10 - score)/9
+            if 'drd2' in name : #####
                 score = 1 - score #####
-            #print(f'{name}:{score}!!!weight:{weight}')
+            if 'gsk3b' in name:
+                score = 1 - score
             temp_list.append(score * weight)
-            print('tmp list:',tmp_list)
             self.temp_oracle_score[name] = score
             temp_hyper.append(score)
 
@@ -65,8 +65,6 @@ class MultiOracle(Oracle):
             avg_score = chebyshev_scalarization_batch(temp_hyper, weights=self.weight_list)
         else:
             avg_score = np.sum(temp_list)
-        #print('tmp list',temp_list)
-        #print('average score',avg_score)
         if return_all:
             return avg_score, temp_hyper
         else:
@@ -84,11 +82,11 @@ def main():
     parser.add_argument('--n_jobs', type=int, default=-1)
     parser.add_argument('--output_dir', type=str, default=None)
     parser.add_argument('--patience', type=int, default=500)
-    parser.add_argument('--max_oracle_calls', type=int, default=10000)
+    parser.add_argument('--max_oracle_calls', type=int, default=5000)
     parser.add_argument('--freq_log', type=int, default=200)
     parser.add_argument('--n_runs', type=int, default=5)
     # parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--seed', type=int, nargs="+", default=[0])
+    parser.add_argument('--seed', type=int, nargs="+", default=[42,43,44,45,46])
     parser.add_argument('--task', type=str, default="simple", choices=["tune", "simple", "production"])
     parser.add_argument('--oracles', nargs="+", default=["QED"])  #
     parser.add_argument('--log_results', action='store_true')

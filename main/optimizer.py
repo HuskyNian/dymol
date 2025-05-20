@@ -11,7 +11,15 @@ import wandb
 from main.utils.chem import *
 from evaluators.hypervolume import get_hypervolume, get_hypervolume_docker, get_hypervolume_pygmo
 import subprocess
-
+import json
+from pymoo.indicators.hv import HV
+from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
+def cal_hv(scores):
+    ref_point = np.array([1.1]*len(scores[0]))
+    hv = HV(ref_point=ref_point)
+    nds = NonDominatedSorting().do(scores,only_non_dominated_front=True)
+    scores = scores[nds]
+    return hv(scores)
 
 class Objdict(dict):
     def __getattr__(self, name):
@@ -67,6 +75,8 @@ class Oracle:
         self.diversity_evaluator = tdc.Evaluator(name='Diversity')
         self.results_dict = []
         self.last_log = 0
+        self.name_list = ['qed','sa','drd2','jnk3','gsk3b']
+        self.score_functions = {name:tdc.Oracle(name=name) for name in self.name_list}
 
     @property
     def budget(self):
@@ -115,13 +125,14 @@ class Oracle:
                 # Otherwise, log the input molecules
                 smis = [Chem.MolToSmiles(m) for m in mols]
                 n_calls = len(self.mol_buffer)
-
+                
+        scores_5d = np.array([self.evaluate_array(smi) for smi in smis])
+        volume = cal_hv(scores_5d)
         avg_top1 = np.max(scores)
         avg_top10 = np.mean(sorted(scores, reverse=True)[:10])
         avg_top100 = np.mean(scores)
         avg_sa = np.mean(self.sa_scorer(smis))
         diversity_top100 = self.diversity_evaluator(smis)
-        print('type self evalutor',type(self.evaluator))
         if len(self.evaluator.name.split('+')) > 1:
             if len(self.evaluator.name.split('+')) < 5:
                 HV, R2 = get_hypervolume(None, self.evaluator.pareto_rewards, len(self.evaluator.name.split('+')))
@@ -145,7 +156,7 @@ class Oracle:
               f'top1_auc : {auc1:.4f} | '
             f'top10_auc : {auc10:.4f} | '
             f'top100_auc : {auc100:.4f} | '
-              f'HV: {HV:.3f} | '
+              f'HV: {volume:.3f} | '
               f'R2: {R2:.3f} | '
               f'avg_sa: {avg_sa:.3f} | '
               f'div: {diversity_top100:.3f}'
@@ -156,15 +167,31 @@ class Oracle:
                 'avg_top1':avg_top1,
                 'avg_top10':avg_top10,
                 'avg_top100':avg_top100,
-                #'hypervolume':volume,
+                'hypervolume':volume,
                 'top1_auc':auc1,
                 'top10_auc':auc10,
                 'top100_auc':auc100,
                 'div':diversity_top100,
-            })       
+            })     
+        save_path = os.path.join(self.args.output_dir, 'results_' +self.task_label + '.json')
+                
+        with open(save_path,'w') as f:
+            json.dump(self.results_dict, f, indent=4)  
 
         # try:
-       
+    
+    def evaluate_array(self, smi):
+        scores = []
+        for p in self.name_list:
+            if p in ['qed','jnk3','bbbp1']:
+                scores.append(1- self.score_functions[p](smi)) 
+            elif p == 'sa':
+                scores.append((self.score_functions[p](smi) -1 ) /9) 
+            elif p in ['gsk3b','drd2','smarts_filter']:
+                scores.append(self.score_functions[p](smi))
+            else:
+                raise NotImplementedError("{p} property is not defined in base.py")
+        return scores
 
     def __len__(self):
         return len(self.mol_buffer)

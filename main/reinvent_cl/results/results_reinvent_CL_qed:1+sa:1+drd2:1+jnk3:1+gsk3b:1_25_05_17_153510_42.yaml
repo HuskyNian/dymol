@@ -70,6 +70,14 @@ O=C(Cc1cccc2ccccc12)Nc1ccsc1CC(=O)N1CCCC1:
 - 'drd2_current: 0.9990756512650224'
 - 'jnk3_current: 0.57'
 - 'gsk3b_current: 0.98'
+O=C(Cc1cccc2ccccc12)Nc1ccsc1C(=O)NC(=O)N1CCCCC1:
+- 4.131993989290463
+- 5001
+- 'qed: 0.6546184944642853'
+- 'sa: 0.8581720276032131'
+- 'drd2_current: 0.9992034672229653'
+- 'jnk3_current: 0.65'
+- 'gsk3b_current: 0.97'
 CC(C)NC(=O)Cc1ccccc1NC(=O)Cc1cccc2ccccc12:
 - 4.126180523428131
 - 1705
